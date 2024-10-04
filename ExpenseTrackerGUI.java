@@ -5,6 +5,13 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
+import java.sql.*;
+import java.sql.ResultSet;
+import java.sql.Statement;
 
 // Expense class to represent each expense
 class Expense {
@@ -46,6 +53,7 @@ public class ExpenseTrackerGUI extends JFrame {
     private JTextField descriptionField;
     private JTable expenseTable;
     private JLabel totalLabel;
+    private Connection connection;
 
     public ExpenseTrackerGUI() {
         expenses = new ArrayList<>();
@@ -54,6 +62,7 @@ public class ExpenseTrackerGUI extends JFrame {
 
     // Method to initialize the User Interface
     private void initUI() {
+        
         // Create the main frame
         setTitle("Expense Tracker");
         setSize(600, 400);
@@ -83,7 +92,7 @@ public class ExpenseTrackerGUI extends JFrame {
         inputPanel.add(totalLabel);
 
         // Table to display expenses
-        String[] columnNames = {"Amount", "Category", "Description"};
+        String[] columnNames = {"Amount", "Category", "Description", "Update", "Delete"};
         tableModel = new DefaultTableModel(columnNames, 0);
         expenseTable = new JTable(tableModel);
 
@@ -103,11 +112,35 @@ public class ExpenseTrackerGUI extends JFrame {
         add(tableScrollPane, BorderLayout.CENTER);
 
         setVisible(true);
+        showValues();
+    }
+    public void connectToDatabase() {
+        try {
+            // SQLite connection string
+            Class.forName("com.mysql.jdbc.Driver");
+            connection = DriverManager.getConnection("jdbc:mysql://localhost:3306/java","root", "");
+            System.out.println("Connected to SQLite database.");
+            // Statement statement = null;
+            // ResultSet resultSet = null;
+
+            // statement = connection.createStatement();
+            // resultSet = statement.executeQuery("SELECT * FROM expenses");
+            // System.out.println("here");
+            // resultSet.next();
+            // System.out.println(resultSet.getString("amount"));
+            // System.out.println(amountField.getText());
+            
+        } catch (SQLException e) {
+            System.out.println(e.getMessage());
+        }catch (ClassNotFoundException e) {
+            System.out.println(e.getMessage());
+        }
     }
 
     // Method to add an expense
     private void addExpense() {
         try {
+
             // Retrieve inputs from text fields
             double amount = Double.parseDouble(amountField.getText());
             String category = categoryField.getText();
@@ -119,8 +152,9 @@ public class ExpenseTrackerGUI extends JFrame {
 
             // Update table
             tableModel.addRow(new Object[]{amount, category, description});
-
+            // System.out.println(expense.toString());
             // Clear fields after input
+            connectToDatabase();
             amountField.setText("");
             categoryField.setText("");
             descriptionField.setText("");
@@ -149,5 +183,24 @@ public class ExpenseTrackerGUI extends JFrame {
                 new ExpenseTrackerGUI();
             }
         });
+    }
+    private void showValues(){
+        try{
+            connectToDatabase();
+            Statement statement = null;
+            ResultSet resultSet = null;
+            double total = 0;
+
+            statement = connection.createStatement();
+            resultSet = statement.executeQuery("SELECT * FROM expenses");
+            
+            while(resultSet.next()){
+                total += Double.valueOf(resultSet.getInt("amount"));
+                tableModel.addRow(new Object[]{resultSet.getString("amount"), resultSet.getString("category"), resultSet.getString("description")});
+            }
+            totalLabel.setText("Total Expenses: $" + total);
+        }catch (SQLException e) {
+            System.out.println(e.getMessage());
+        }
     }
 }
